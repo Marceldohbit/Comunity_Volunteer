@@ -1,62 +1,11 @@
 // Community Serve - JavaScript Application
 class CommunityServe {
     constructor() {
-        this.communities = [
-            {
-                id: 1,
-                name: "Green Valley Neighborhood",
-                description: "A vibrant community focused on environmental sustainability and family-friendly activities.",
-                location: "Green Valley",
-                members: 248,
-                activeWorks: 12,
-                icon: "fa-home"
-            },
-            {
-                id: 2,
-                name: "Downtown Urban Center",
-                description: "Urban community working on homelessness, education, and community development.",
-                location: "Downtown",
-                members: 189,
-                activeWorks: 8,
-                icon: "fa-building"
-            },
-            {
-                id: 3,
-                name: "Riverside Youth Network",
-                description: "Dedicated to youth development, mentorship, and educational support programs.",
-                location: "Riverside",
-                members: 156,
-                activeWorks: 15,
-                icon: "fa-graduation-cap"
-            },
-            {
-                id: 4,
-                name: "Elderly Care Alliance",
-                description: "Supporting seniors through companionship, healthcare assistance, and social activities.",
-                location: "Citywide",
-                members: 97,
-                activeWorks: 6,
-                icon: "fa-heart"
-            },
-            {
-                id: 5,
-                name: "Environmental Action Group",
-                description: "Community-driven environmental conservation and cleanup initiatives.",
-                location: "Various",
-                members: 312,
-                activeWorks: 9,
-                icon: "fa-leaf"
-            },
-            {
-                id: 6,
-                name: "Food Security Network",
-                description: "Fighting hunger through food banks, community gardens, and nutrition education.",
-                location: "Multiple Districts",
-                members: 203,
-                activeWorks: 11,
-                icon: "fa-utensils"
-            }
-        ];
+        this.apiUrl = 'http://localhost:3000/api';
+        this.communities = [];
+        this.works = [];
+        this.categories = [];
+        this.regions = [];
 
         this.works = [
             {
@@ -191,7 +140,8 @@ class CommunityServe {
         this.init();
     }
 
-    init() {
+    async init() {
+        await this.loadData();
         this.updateStats();
         this.renderCommunities();
         this.renderWorks();
@@ -200,15 +150,97 @@ class CommunityServe {
         this.populateCommunityFilter();
     }
 
+    // API methods
+    async fetchAPI(endpoint, params = {}) {
+        try {
+            const queryString = new URLSearchParams(params).toString();
+            const url = queryString ? `${this.apiUrl}${endpoint}?${queryString}` : `${this.apiUrl}${endpoint}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'API request failed');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async loadData() {
+        try {
+            // Load communities
+            const communitiesResponse = await this.fetchAPI('/communities');
+            if (communitiesResponse.success) {
+                this.communities = communitiesResponse.data.map(c => ({
+                    id: c.id,
+                    name: c.slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                    description: c.description,
+                    location: c.city + (c.region_name ? ', ' + c.region_name : ''),
+                    members: c.member_count,
+                    activeWorks: c.active_works_count,
+                    icon: c.icon || 'fa-home'
+                }));
+            }
+
+            // Load works
+            const worksResponse = await this.fetchAPI('/works');
+            if (worksResponse.success) {
+                this.works = worksResponse.data.map(w => ({
+                    id: w.id,
+                    title: w.title,
+                    description: w.description,
+                    communityId: w.community_id,
+                    community: w.community_slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+                    category: w.category_name.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'),
+                    volunteersNeeded: w.volunteers_needed,
+                    volunteersSignedUp: w.volunteers_registered,
+                    startDate: w.start_date,
+                    endDate: w.end_date,
+                    location: w.city + (w.region_name ? ', ' + w.region_name : ''),
+                    icon: w.category_icon || 'fa-hand-heart'
+                }));
+            }
+
+            // Load categories
+            const categoriesResponse = await this.fetchAPI('/categories');
+            if (categoriesResponse.success) {
+                this.categories = categoriesResponse.data;
+            }
+
+            // Load regions
+            const regionsResponse = await this.fetchAPI('/regions');
+            if (regionsResponse.success) {
+                this.regions = regionsResponse.data;
+            }
+
+            // Load stats
+            const statsResponse = await this.fetchAPI('/stats');
+            if (statsResponse.success) {
+                this.stats = statsResponse.data;
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    }
+
     // Statistics Updates
     updateStats() {
-        const totalWorks = this.works.length;
-        const totalVolunteers = this.works.reduce((sum, work) => sum + work.volunteersSignedUp, 0) + this.volunteers.length;
-        const totalCommunities = this.communities.length;
+        if (this.stats) {
+            this.animateCounter('total-works', this.stats.total_works);
+            this.animateCounter('total-volunteers', this.stats.total_volunteers);
+            this.animateCounter('total-communities', this.stats.total_communities);
+        } else {
+            const totalWorks = this.works.length;
+            const totalVolunteers = this.works.reduce((sum, work) => sum + work.volunteersSignedUp, 0) + this.volunteers.length;
+            const totalCommunities = this.communities.length;
 
-        this.animateCounter('total-works', totalWorks);
-        this.animateCounter('total-volunteers', totalVolunteers);
-        this.animateCounter('total-communities', totalCommunities);
+            this.animateCounter('total-works', totalWorks);
+            this.animateCounter('total-volunteers', totalVolunteers);
+            this.animateCounter('total-communities', totalCommunities);
+        }
     }
 
     animateCounter(elementId, targetValue) {
@@ -442,41 +474,72 @@ class CommunityServe {
         localStorage.setItem('community-serve-volunteers', JSON.stringify(this.volunteers));
     }
 
-    handleVolunteerSignup(e) {
+    async handleVolunteerSignup(e) {
         e.preventDefault();
         
         const formData = new FormData(e.target);
         const interests = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
             .map(cb => cb.value);
 
-        const volunteer = {
-            id: Date.now(),
+        const volunteerData = {
+            work_id: 1, // You can modify this to select specific work
             name: document.getElementById('volunteer-name').value,
             email: document.getElementById('volunteer-email').value,
             phone: document.getElementById('volunteer-phone').value,
-            community: document.getElementById('volunteer-community').value,
-            interests: interests,
-            availability: document.getElementById('volunteer-availability').value,
-            signupDate: new Date().toISOString()
+            interests: interests.join(', '),
+            message: `Volunteer application - Interested in: ${interests.join(', ')}`,
+            emergency_name: document.getElementById('volunteer-name').value,
+            emergency_phone: document.getElementById('volunteer-phone').value,
+            transportation: true
         };
 
-        // Check if email already exists
-        if (this.volunteers.some(v => v.email === volunteer.email)) {
+        // Check if email already exists locally
+        if (this.volunteers.some(v => v.email === volunteerData.email)) {
             this.showMessage('You are already registered as a volunteer!', 'warning');
             return;
         }
 
-        this.volunteers.push(volunteer);
-        this.saveVolunteers();
+        // Send to API
+        try {
+            const response = await fetch(this.apiUrl + '/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(volunteerData)
+            });
 
-        // Reset form
-        e.target.reset();
-        
-        // Show success message
-        this.showMessage(`Thank you, ${volunteer.name}! Your volunteer registration has been submitted successfully. We'll contact you soon with opportunities that match your interests.`, 'success');
+            const result = await response.json();
 
-        // Update stats
-        this.updateStats();
+            if (result.success) {
+                // Store locally
+                const volunteer = {
+                    id: result.registration_id,
+                    name: volunteerData.name,
+                    email: volunteerData.email,
+                    phone: volunteerData.phone,
+                    community: document.getElementById('volunteer-community').value,
+                    interests: interests,
+                    availability: document.getElementById('volunteer-availability').value,
+                    signupDate: new Date().toISOString()
+                };
+                
+                this.volunteers.push(volunteer);
+                this.saveVolunteers();
+
+                // Reset form
+                e.target.reset();
+
+                // Show success message
+                this.showMessage(result.message || 'Thank you for signing up! We will contact you soon.', 'success');
+                this.updateStats();
+            } else {
+                this.showMessage(result.error || 'Registration failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showMessage('Network error. Please check your connection and try again.', 'error');
+        }
     }
 
     quickVolunteerSignup(workId) {
