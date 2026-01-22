@@ -369,9 +369,9 @@ app.use('/api/*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 API available at http://localhost:${PORT}/api`);
-    console.log(`🌐 Frontend available at http://localhost:${PORT}/index.html`);
+    console.log(` Server running on http://localhost:${PORT}`);
+    console.log(` API available at http://localhost:${PORT}/api`);
+    console.log(` Frontend available at http://localhost:${PORT}/index.html`);
 });
 
 // Graceful shutdown

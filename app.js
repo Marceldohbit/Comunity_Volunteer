@@ -481,15 +481,30 @@ class CommunityServe {
         const interests = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
             .map(cb => cb.value);
 
+        const name = document.getElementById('volunteer-name').value;
+        const email = document.getElementById('volunteer-email').value;
+        const phone = document.getElementById('volunteer-phone').value;
+        const community = document.getElementById('volunteer-community').value;
+        const availability = document.getElementById('volunteer-availability').value;
+
+        // Find a work from the selected community to register for
+        const communityWork = this.works.find(w => w.community === community && w.volunteersSignedUp < w.volunteersNeeded);
+        
+        if (!communityWork) {
+            this.showMessage('No available volunteer opportunities in the selected community at the moment.', 'warning');
+            return;
+        }
+
         const volunteerData = {
-            work_id: 1, // You can modify this to select specific work
-            name: document.getElementById('volunteer-name').value,
-            email: document.getElementById('volunteer-email').value,
-            phone: document.getElementById('volunteer-phone').value,
+            work_id: communityWork.id,
+            name: name,
+            email: email,
+            phone: phone,
             interests: interests.join(', '),
-            message: `Volunteer application - Interested in: ${interests.join(', ')}`,
-            emergency_name: document.getElementById('volunteer-name').value,
-            emergency_phone: document.getElementById('volunteer-phone').value,
+            message: `General volunteer application. Interested in: ${interests.join(', ')}. Available: ${availability}`,
+            motivation: `I want to volunteer with ${community}`,
+            emergency_name: name,
+            emergency_phone: phone,
             transportation: true
         };
 
@@ -530,6 +545,10 @@ class CommunityServe {
                 // Reset form
                 e.target.reset();
 
+                // Reload data to reflect updated counts
+                await this.loadData();
+                this.renderWorks();
+
                 // Show success message
                 this.showMessage(result.message || 'Thank you for signing up! We will contact you soon.', 'success');
                 this.updateStats();
@@ -542,7 +561,7 @@ class CommunityServe {
         }
     }
 
-    quickVolunteerSignup(workId) {
+    async quickVolunteerSignup(workId) {
         const work = this.works.find(w => w.id === workId);
         if (!work) return;
 
@@ -551,33 +570,71 @@ class CommunityServe {
             return;
         }
 
-        // Simple quick signup (in real app, this would require proper form)
+        // Simple quick signup
         const name = prompt(`Sign up to volunteer for "${work.title}"?\n\nPlease enter your name:`);
         if (!name) return;
 
         const email = prompt('Please enter your email:');
         if (!email) return;
 
-        // Add to volunteers
-        const volunteer = {
-            id: Date.now(),
-            name: name,
-            email: email,
-            workId: workId,
-            signupDate: new Date().toISOString()
-        };
+        const phone = prompt('Please enter your phone number:');
+        if (!phone) return;
 
-        this.volunteers.push(volunteer);
-        this.saveVolunteers();
+        // Send to database
+        try {
+            const volunteerData = {
+                work_id: workId,
+                name: name,
+                email: email,
+                phone: phone,
+                interests: work.category,
+                message: `Quick signup for ${work.title}`,
+                motivation: `Interested in ${work.title}`,
+                emergency_name: name,
+                emergency_phone: phone,
+                transportation: true
+            };
 
-        // Update work volunteer count
-        work.volunteersSignedUp++;
+            const response = await fetch(this.apiUrl + '/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(volunteerData)
+            });
 
-        // Re-render works to show updated counts
-        this.renderWorks();
-        this.updateStats();
+            const result = await response.json();
 
-        this.showMessage(`Thank you, ${name}! You've successfully signed up to volunteer for "${work.title}".`, 'success');
+            if (result.success) {
+                // Add to local volunteers
+                const volunteer = {
+                    id: result.registration_id,
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    workId: workId,
+                    signupDate: new Date().toISOString()
+                };
+
+                this.volunteers.push(volunteer);
+                this.saveVolunteers();
+
+                // Update work volunteer count locally
+                work.volunteersSignedUp++;
+
+                // Re-render works to show updated counts
+                this.renderWorks();
+                await this.loadData(); // Reload to get latest data
+                this.updateStats();
+
+                this.showMessage(`Thank you, ${name}! You've successfully signed up to volunteer for "${work.title}".`, 'success');
+            } else {
+                this.showMessage(result.error || 'Registration failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showMessage('Network error. Please try again.', 'error');
+        }
     }
 
     showWorkDetails(workId) {
