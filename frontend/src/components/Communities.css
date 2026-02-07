@@ -1,0 +1,106 @@
+/* Communities Grid */
+.communities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 2rem;
+}
+
+.community-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.community-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    border-color: #7cb342;
+}
+
+.community-icon {
+    font-size: 3rem;
+    color: #4caf50;
+    margin-bottom: 1rem;
+    background: #f1f8e9;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+
+.community-card h3 {
+    color: #2c5530;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.community-card p {
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.community-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.community-stat {
+    text-align: center;
+}
+
+.community-stat-number {
+    font-weight: bold;
+    color: #4caf50;
+    font-size: 1.2rem;
+}
+
+.community-stat-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Pending Approval Styles */
+.community-card.pending-approval {
+    border: 2px dashed #ffc107;
+    background: linear-gradient(135deg, #fff9c4, #ffffff);
+}
+
+.community-card.pending-approval:hover {
+    border-color: #f57c00;
+}
+
+.pending-badge {
+    display: inline-block;
+    background: #ffc107;
+    color: #212529;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .communities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pending-badge {
+        display: block;
+        margin: 0.5rem auto 0;
+        width: fit-content;
+    }
+}
