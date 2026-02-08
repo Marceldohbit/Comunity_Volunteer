@@ -1,0 +1,78 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ react, final ]
+  pull_request:
+    branches: [ react, final ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: '**/package-lock.json'
+
+    - name: Install Backend Dependencies
+      run: npm install
+      working-directory: ./backend
+
+    - name: Install Frontend Dependencies
+      run: npm install
+      working-directory: ./frontend
+
+    - name: Run Backend Tests
+      run: npm test
+      working-directory: ./backend
+      env:
+        CI: true
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: password
+        DB_NAME: test_db
+        DB_PORT: 3306
+        JWT_SECRET: a-secret-for-testing
+
+    - name: Test Docker Build - Backend
+      run: docker build -t com_serve_backend ./backend
+
+    - name: Test Docker Build - Frontend
+      run: docker build -t com_serve_frontend ./frontend
+
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-compose-plugin
+
+    - name: Test Docker Compose Configuration
+      run: docker compose config
