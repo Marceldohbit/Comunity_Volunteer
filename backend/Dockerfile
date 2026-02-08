@@ -7,11 +7,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy application code
 COPY . .
+
+# Remove devDependencies after build (keep only production dependencies)
+RUN npm prune --production
 
 # Change ownership of the app directory to the existing node user
 RUN chown -R node:node /app
