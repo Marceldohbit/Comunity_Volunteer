@@ -27,6 +27,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Debug - List repository structure
+      run: |
+        pwd
+        ls -la
+        echo "Backend directory:"
+        ls -la backend/ || echo "Backend directory not found"
+        echo "Frontend directory:"
+        ls -la frontend/ || echo "Frontend directory not found"
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
