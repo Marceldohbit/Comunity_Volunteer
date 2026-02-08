@@ -37,6 +37,15 @@ pool.getConnection()
         console.error(' Database connection failed:', err.message);
     });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        service: 'backend'
+    });
+});
+
 
 // API ROUTES
 
