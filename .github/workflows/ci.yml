@@ -53,3 +53,12 @@ jobs:
         DB_NAME: test_db
         DB_PORT: 3306
         JWT_SECRET: a-secret-for-testing
+
+    - name: Test Docker Build - Backend
+      run: docker build -t com_serve_backend ./backend
+
+    - name: Test Docker Build - Frontend
+      run: docker build -t com_serve_frontend ./frontend
+
+    - name: Test Docker Compose Configuration
+      run: docker-compose config
