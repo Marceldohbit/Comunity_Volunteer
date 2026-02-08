@@ -13,12 +13,8 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S node -u 1001
-
-# Change ownership of the app directory to the nodejs user
-RUN chown -R node:nodejs /app
+# Change ownership of the app directory to the existing node user
+RUN chown -R node:node /app
 USER node
 
 # Expose port
