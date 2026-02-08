@@ -60,5 +60,10 @@ jobs:
     - name: Test Docker Build - Frontend
       run: docker build -t com_serve_frontend ./frontend
 
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose-plugin
+
     - name: Test Docker Compose Configuration
-      run: docker-compose config
+      run: docker compose config
